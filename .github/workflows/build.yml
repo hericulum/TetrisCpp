@@ -53,25 +53,18 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup MSYS2 Environment
+      - name: Setup MSYS2 and Install Packages
         uses: msys2/setup-msys2@v2
         with:
           msystem: UCRT64
           update: true
-          install: mingw-w64-ucrt64-toolchain unzip zip
-
-      - name: Download and Extract SFML Windows SDK
-        shell: msys2 {0}
-        run: |
-          curl -L -o sfml.zip https://www.sfml-dev.org/files/SFML-3.1.0-windows-gcc-64-bit.zip
-          unzip -q sfml.zip
+          install: mingw-w64-ucrt-x86_64-toolchain mingw-w64-ucrt-x86_64-sfml unzip zip
 
       - name: Compile Windows Executable
         shell: msys2 {0}
         run: |
-          g++ -c src/main.cpp -I./SFML-3.1.0/include
+          g++ -c src/main.cpp
           g++ main.o -o tetris.exe \
-            -L./SFML-3.1.0/lib \
             -lsfml-graphics -lsfml-window -lsfml-system -lsfml-audio
 
       - name: Package Windows Release
@@ -80,7 +73,19 @@ jobs:
           mkdir -p tetris-win
           cp tetris.exe tetris-win/
           cp -r assets/ tetris-win/
-          cp SFML-3.1.0/bin/*.dll tetris-win/
+          
+          # Copy DLLs from UCRT64 environment
+          cp /ucrt64/bin/libsfml-*.dll tetris-win/ || true
+          cp /ucrt64/bin/openal32.dll tetris-win/ || true
+          cp /ucrt64/bin/libFLAC-*.dll tetris-win/ || true
+          cp /ucrt64/bin/libogg-*.dll tetris-win/ || true
+          cp /ucrt64/bin/libvorbis-*.dll tetris-win/ || true
+          cp /ucrt64/bin/libvorbisfile-*.dll tetris-win/ || true
+          cp /ucrt64/bin/libvorbisenc-*.dll tetris-win/ || true
+          cp /ucrt64/bin/libwinpthread-*.dll tetris-win/ || type nul
+          cp /ucrt64/bin/libstdc++-*.dll tetris-win/ || true
+          cp /ucrt64/bin/libgcc_s_seh-*.dll tetris-win/ || true
+
           cd tetris-win && zip -r ../tetris-windows.zip *
 
       - name: Upload Windows Artifact
