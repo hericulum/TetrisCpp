@@ -1,0 +1,10 @@
+# Compiled binaries and objects
+tetris
+*.o
+
+# Local save data
+highscore.txt
+
+# IDE files
+.vscode/
+.DS_Store
