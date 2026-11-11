@@ -13,15 +13,23 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Install Dependencies & SFML via Apt
+      - name: Install Dependencies
         run: |
           sudo apt update
-          sudo apt install -y libsfml-dev libflac-dev libogg-dev libvorbis-dev libopenal-dev zip wget g++ make
+          sudo apt install -y libgl1-mesa-dev libxrandr-dev libxi-dev libudev-dev libflac-dev libogg-dev libvorbis-dev libopenal-dev zip wget g++ make
+
+      - name: Download SFML 3.1.0 Linux SDK from GitHub
+        run: |
+          wget https://github.com/SFML/SFML/releases/download/3.1.0/SFML-3.1.0-linux-gcc-64-bit.tar.gz
+          tar -xzf SFML-3.1.0-linux-gcc-64-bit.tar.gz
 
       - name: Compile Game
         run: |
-          g++ -c src/main.cpp
+          g++ -c src/main.cpp -I./SFML-3.1.0/include
           g++ main.o -o tetris \
+            -L./SFML-3.1.0/lib \
+            -L/usr/lib/x86_64-linux-gnu \
+            -Wl,-rpath,'$ORIGIN/lib' \
             -lsfml-graphics -lsfml-window -lsfml-system -lsfml-audio \
             -lFLAC -logg -lvorbis -lvorbisenc -lvorbisfile -lopenal
 
@@ -30,6 +38,7 @@ jobs:
           mkdir -p tetris-linux
           cp tetris tetris-linux/
           cp -r assets/ tetris-linux/
+          cp -r SFML-3.1.0/lib tetris-linux/
           zip -r tetris-linux.zip tetris-linux
 
       - name: Upload Linux Artifact
