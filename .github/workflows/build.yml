@@ -81,3 +81,4 @@ jobs:
           cp /ucrt64/bin/libvorbis-*.dll tetris-win/ || true
           cp /ucrt64/bin/libvorbisfile-*.dll tetris-win/ || true
           cp /ucrt64
+          
