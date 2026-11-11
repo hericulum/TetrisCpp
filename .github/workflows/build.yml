@@ -16,7 +16,7 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt update
-          sudo apt install -y libgl1-mesa-dev libxrandr-dev libxi-dev libudev-dev libflac-dev libogg-dev libvorbis-dev libopenal-dev
+          sudo apt install -y libgl1-mesa-dev libxrandr-dev libxi-dev libudev-dev libflac-dev libogg-dev libvorbis-dev libopenal-dev zip
 
       - name: Download SFML 3.1.0 Linux SDK
         run: |
@@ -25,7 +25,6 @@ jobs:
 
       - name: Compile Game
         run: |
-          # Update your Makefile include path dynamically for the CI environment
           g++ -c src/main.cpp -I./SFML-3.1.0/include
           g++ main.o -o tetris \
             -L./SFML-3.1.0/lib \
@@ -39,7 +38,6 @@ jobs:
           mkdir -p tetris-linux
           cp tetris tetris-linux/
           cp -r assets/ tetris-linux/
-          # Copy SFML shared libraries so it runs out-of-the-box
           cp -r SFML-3.1.0/lib tetris-linux/
           zip -r tetris-linux.zip tetris-linux
 
@@ -55,33 +53,36 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Download SFML 3.1.0 Windows MinGW SDK
-        run: |
-          Invoke-WebRequest -Uri "https://www.sfml-dev.org/files/SFML-3.1.0-windows-gcc-64-bit.zip" -OutFile "sfml.zip"
-          Expand-Archive sfml.zip -DestinationPath .
+      - name: Setup MSYS2 Environment
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: mingw-w64-x86_64-toolchain unzip zip
 
-      - name: Setup MinGW / GCC
-        uses: awalsh128/cache-apt-pkgs-action@latest # (or let MSYS2 handle it)
-        # Windows runners have g++ built-in via MSYS2 / MinGW
-      
-      - name: Compile Windows Executable
-        shell: bash
+      - name: Download and Extract SFML Windows SDK
+        shell: msys2 {0}
         run: |
-          SFML_DIR="./SFML-3.1.0"
-          g++ -c src/main.cpp -I"$SFML_DIR/include"
+          curl -L -o sfml.zip https://www.sfml-dev.org/files/SFML-3.1.0-windows-gcc-64-bit.zip
+          unzip -q sfml.zip
+
+      - name: Compile Windows Executable
+        shell: msys2 {0}
+        run: |
+          g++ -c src/main.cpp -I./SFML-3.1.0/include
           g++ main.o -o tetris.exe \
-            -L"$SFML_DIR/lib" \
+            -L./SFML-3.1.0/lib \
             -lsfml-graphics -lsfml-window -lsfml-system -lsfml-audio
 
       - name: Package Windows Release
-        shell: bash
+        shell: msys2 {0}
         run: |
-          mkdir tetris-win
+          mkdir -p tetris-win
           cp tetris.exe tetris-win/
           cp -r assets/ tetris-win/
-          # Copy SFML DLLs needed for Windows runtime next to the executable
+          # Automatically bundle all required SFML DLLs next to the executable
           cp SFML-3.1.0/bin/*.dll tetris-win/
-          cd tetris-win && zip -r ../tetris-windows.zip *
+          zip -r tetris-windows.zip tetris-win
 
       - name: Upload Windows Artifact
         uses: actions/upload-artifact@v4
