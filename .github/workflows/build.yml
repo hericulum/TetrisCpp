@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main ]
     tags:
-      - 'v*' # Triggers automatically when you push a tag like v1.0.0
+      - 'v*'
 
 jobs:
   build-linux:
@@ -74,11 +74,46 @@ jobs:
           cp tetris.exe tetris-win/
           cp -r assets/ tetris-win/
           
-          cp /ucrt64/bin/libsfml-*.dll tetris-win/ || true
-          cp /ucrt64/bin/openal32.dll tetris-win/ || true
-          cp /ucrt64/bin/libFLAC-*.dll tetris-win/ || true
-          cp /ucrt64/bin/libogg-*.dll tetris-win/ || true
-          cp /ucrt64/bin/libvorbis-*.dll tetris-win/ || true
-          cp /ucrt64/bin/libvorbisfile-*.dll tetris-win/ || true
-          cp /ucrt64
-          
+          # Safely copy all required runtime DLLs from UCRT64
+          cp /ucrt64/bin/sfml-*.dll tetris-win/ || true
+          cp /ucrt64/bin/openal*.dll tetris-win/ || true
+          cp /ucrt64/bin/libFLAC*.dll tetris-win/ || true
+          cp /ucrt64/bin/libogg*.dll tetris-win/ || true
+          cp /ucrt64/bin/libvorbis*.dll tetris-win/ || true
+          cp /ucrt64/bin/libwinpthread*.dll tetris-win/ || true
+          cp /ucrt64/bin/libstdc++*.dll tetris-win/ || true
+          cp /ucrt64/bin/libgcc_s_seh*.dll tetris-win/ || true
+
+          cd tetris-win && zip -r ../tetris-windows.zip *
+
+      - name: Upload Windows Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tetris-windows-release
+          path: tetris-windows.zip
+
+  release:
+    needs: [build-linux, build-windows]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - name: Download Linux Build
+        uses: actions/download-artifact@v4
+        with:
+          name: tetris-ubuntu-release
+
+      - name: Download Windows Build
+        uses: actions/download-artifact@v4
+        with:
+          name: tetris-windows-release
+
+      - name: Create GitHub Release and Upload Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            tetris-linux.zip
+            tetris-windows.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
